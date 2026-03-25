@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { 
   Send, 
   Bot, 
+  FileText,
   User, 
   Loader2, 
   Plus, 
@@ -17,6 +19,13 @@ interface Message {
   role: 'user' | 'ai';
   content: string;
   timestamp: Date;
+  lawReferences?: string[];
+  steps?: string[];
+  suggestedDocument?: {
+    type: string;
+    title: string;
+    description: string;
+  } | null;
 }
 
 interface ChatSession {
@@ -62,6 +71,8 @@ export default function AIAssistant() {
   const [userId] = useState<string>(() => getOrCreateUserId());
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+  const hasAutoSent = useRef(false);
+  const location = useLocation();
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -81,6 +92,24 @@ export default function AIAssistant() {
       inputRef.current.style.height = Math.min(inputRef.current.scrollHeight, 200) + 'px';
     }
   }, [input]);
+
+  // Auto-send prefilled message from Legal Help or other pages
+  useEffect(() => {
+    const state = location.state as { prefillMessage?: string } | null;
+    if (state?.prefillMessage && !hasAutoSent.current) {
+      hasAutoSent.current = true;
+      setInput(state.prefillMessage);
+      // Clear the location state so it doesn't re-trigger on re-render
+      window.history.replaceState({}, '');
+      // Auto-submit after a short delay so the input is set
+      setTimeout(() => {
+        setInput(state.prefillMessage!);
+        // Trigger submit programmatically
+        const submitBtn = document.querySelector('button[type="submit"]') as HTMLButtonElement;
+        if (submitBtn) submitBtn.click();
+      }, 300);
+    }
+  }, [location.state]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,6 +135,9 @@ export default function AIAssistant() {
         role: 'ai',
         content: response.data.aiResponse.message,
         timestamp: new Date(response.data.aiResponse.timestamp),
+        lawReferences: response.data.aiResponse.lawReferences || [],
+        steps: response.data.aiResponse.steps || [],
+        suggestedDocument: response.data.aiResponse.suggestedDocument || null,
       };
       
       setMessages((prev) => [...prev, aiMessage]);
@@ -314,6 +346,53 @@ export default function AIAssistant() {
                         <p className="whitespace-pre-wrap">{message.content}</p>
                       )}
                     </div>
+
+                    {/* Relevant Laws */}
+                    {message.role === 'ai' && message.lawReferences && message.lawReferences.length > 0 && (
+                      <div className="mt-2 bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3">
+                        <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wider mb-1.5">⚖️ Relevant Laws</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {message.lawReferences.map((law, i) => (
+                            <span key={i} className="text-xs bg-indigo-100 text-indigo-800 px-2.5 py-1 rounded-full border border-indigo-200">
+                              {law}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Steps to Take */}
+                    {message.role === 'ai' && message.steps && message.steps.length > 0 && (
+                      <div className="mt-2 bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3">
+                        <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2">📋 Steps to Take</p>
+                        <ol className="space-y-1">
+                          {message.steps.map((step, i) => (
+                            <li key={i} className="flex gap-2 text-xs text-emerald-800">
+                              <span className="flex-shrink-0 w-5 h-5 bg-emerald-200 rounded-full flex items-center justify-center text-emerald-700 font-bold text-xs">{i + 1}</span>
+                              <span className="pt-0.5">{step}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    )}
+
+                    {/* Suggested Document */}
+                    {message.role === 'ai' && message.suggestedDocument && (
+                      <div className="mt-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                        <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-1.5">📄 Generate Legal Document</p>
+                        <p className="text-sm text-amber-800 mb-2">{message.suggestedDocument.description}</p>
+                        <button
+                          onClick={() => {
+                            window.open(`/documents?type=${message.suggestedDocument!.type}`, '_blank');
+                          }}
+                          className="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                        >
+                          <FileText className="h-4 w-4" />
+                          {message.suggestedDocument.title}
+                        </button>
+                      </div>
+                    )}
+
                     <p
                       className={`text-xs mt-1 ${
                         message.role === 'user' ? 'text-right text-gray-500' : 'text-gray-400'

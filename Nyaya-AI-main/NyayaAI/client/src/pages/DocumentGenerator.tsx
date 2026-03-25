@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FileText, 
   ChevronRight, 
@@ -19,6 +19,8 @@ import {
   FormField 
 } from '../services/documentsService';
 
+const VALID_TYPES = Object.keys(documentTypeInfo) as DocumentType[];
+
 const DocumentGenerator: React.FC = () => {
   const [selectedType, setSelectedType] = useState<DocumentType | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
@@ -27,6 +29,15 @@ const DocumentGenerator: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState('');
   const [showPreview, setShowPreview] = useState(true);
+
+  // Auto-select document type from URL query param (e.g., ?type=fir-draft)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const typeParam = params.get('type') as DocumentType | null;
+    if (typeParam && VALID_TYPES.includes(typeParam)) {
+      setSelectedType(typeParam);
+    }
+  }, []);
 
   const documentTypes = Object.entries(documentTypeInfo) as [DocumentType, typeof documentTypeInfo[DocumentType]][];
   const currentConfig = selectedType ? documentFormConfigs[selectedType] : null;

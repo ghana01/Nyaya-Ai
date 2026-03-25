@@ -5,6 +5,13 @@ export interface ChatMessage {
   message: string;
   role: 'user' | 'ai';
   timestamp: string;
+  lawReferences?: string[];
+  steps?: string[];
+  suggestedDocument?: {
+    type: string;
+    title: string;
+    description: string;
+  } | null;
 }
 
 export interface ChatResponse {
@@ -13,7 +20,15 @@ export interface ChatResponse {
     sessionId: string;
     userId: string;
     userMessage: ChatMessage;
-    aiResponse: ChatMessage;
+    aiResponse: ChatMessage & {
+      lawReferences: string[];
+      steps: string[];
+      suggestedDocument?: {
+        type: string;
+        title: string;
+        description: string;
+      } | null;
+    };
   };
 }
 

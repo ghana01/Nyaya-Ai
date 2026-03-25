@@ -64,7 +64,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ mode }) => {
         const response = await register(registerData);
         if (response.success) {
           setUser(response.data.user);
-          navigate(from, { replace: true });
+          const redirectTo = response.data.user.role === 'lawyer' ? '/lawyer-dashboard' : from;
+          navigate(redirectTo, { replace: true });
         }
       } else {
         const loginData: LoginData = {
@@ -75,7 +76,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ mode }) => {
         const response = await login(loginData);
         if (response.success) {
           setUser(response.data.user);
-          navigate(from, { replace: true });
+          const redirectTo = response.data.user.role === 'lawyer' ? '/lawyer-dashboard' : from;
+          navigate(redirectTo, { replace: true });
         }
       }
     } catch (err: any) {
