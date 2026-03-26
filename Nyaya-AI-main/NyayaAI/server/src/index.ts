@@ -21,9 +21,11 @@ import lawyerRoutes from './routes/lawyer';
 const app = express();
 
 // Middleware
-const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
-  .split(',')
-  .map((origin) => origin.trim());
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://nyaya-ai-puce.vercel.app',
+  ...(process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',') : [])
+].map((origin) => origin.trim());
 
 app.use(cors({
   origin: (origin, callback) => {
